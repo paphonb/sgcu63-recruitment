@@ -8,20 +8,26 @@ const namePattern = /<h1 type="header">(.*?)<\/h1>/
 const sloganPattern = /<h3 type="header">(.*?)<\/h3>/
 
 async function getLinks() {
+  // promise version of setTimeout
+  const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
+
   const container = document.getElementsByClassName('baanGallery-module--gallery-app--2l-Y5')[0].children[0]
   const tablist = container.children[0]
   const tabs = tablist.getElementsByClassName('ant-tabs-tab')
-  // Load all the tabs
-  for (let tab of tabs) {
-    tab.click()
-  }
-  const links = []
   const panes = document.getElementsByClassName('ant-tabs-tabpane')
-  for (let pane of panes) {
-    // Each baan is represented by a link node
+  const links = []
+  for (let tabNo = 0; tabNo < tabs.length; tabNo++) {
+    const tab = tabs[tabNo]
+    const pane = panes[tabNo]
+    tab.click()
+
+    // wait a bit for contents to render
+    await timeout(500)
+
+    // each baan is represented by a link node
     const baans = pane.getElementsByTagName('a')
     for (let baan of baans) {
-      // Add the link to scrape
+      // add the link to scrape
       links.push(baan.getAttribute('href'))
     }
   }

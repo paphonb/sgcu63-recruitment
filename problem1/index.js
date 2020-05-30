@@ -24,6 +24,15 @@ async function getLinks() {
   return links
 }
 
+async function getBaanInfo() {
+  const h1 = document.getElementsByTagName('h1')[0]
+  const h3 = document.getElementsByTagName('h3')[0]
+  return {
+    name: h1.innerText,
+    slogan: h3.innerText,
+  }
+}
+
 async function scrape() {
   const browser = await puppeteer.launch()
   const page = await browser.newPage()
@@ -34,7 +43,19 @@ async function scrape() {
     height: 900,
   })
   await page.goto(`${baseUrl}/baan`)
-  console.log(await page.evaluate(getLinks))
+
+  // collect links of all baans
+  const links = await page.evaluate(getLinks)
+
+  // collect info for each baan
+  const baans = []
+  for (let link of links) {
+    console.log(`scraping ${link}`)
+    await page.goto(`${baseUrl}${link}`)
+    const baanInfo = await page.evaluate(getBaanInfo)
+    baans.push(baanInfo)
+  }
+  console.log(baans)
   await browser.close()
 }
 

@@ -1,8 +1,11 @@
 // assumption: we need to get all baans but the page from SSR only contains small size baans
 //             so we need to execute client-side scripts to get everything
 const puppeteer = require('puppeteer')
+const fetch = require('node-fetch')
 const fs = require('fs')
 const baseUrl = 'https://rubnongkaomai.com'
+const namePattern = /<h1 type="header">(.*?)<\/h1>/
+const sloganPattern = /<h3 type="header">(.*?)<\/h3>/
 
 async function getLinks() {
   const container = document.getElementsByClassName('baanGallery-module--gallery-app--2l-Y5')[0].children[0]
@@ -25,13 +28,13 @@ async function getLinks() {
   return links
 }
 
-async function getBaanInfo() {
-  const h1 = document.getElementsByTagName('h1')[0]
-  const h3 = document.getElementsByTagName('h3')[0]
-  return {
-    name: h1.innerText,
-    slogan: h3.innerText.split('\n').join('<br>'),
-  }
+async function getBaanInfo(link) {
+  console.log(`getting info for ${link}`)
+  const response = await fetch(link)
+  const html = await response.text()
+  const name = html.match(namePattern)[1]
+  const slogan = html.match(sloganPattern)[1]
+  return { name, slogan }
 }
 
 function createTable(baans) {
@@ -75,19 +78,17 @@ async function scrape() {
 
   // collect links of all baans
   const links = await page.evaluate(getLinks)
+  await browser.close()
 
   // collect info for each baan
   const baans = []
   for (let link of links) {
-    console.log(`scraping ${link}`)
-    await page.goto(`${baseUrl}${link}`)
-    const baanInfo = await page.evaluate(getBaanInfo)
+    const baanInfo = await getBaanInfo(`${baseUrl}${link}`)
     baans.push(baanInfo)
   }
 
   // export data into table
   fs.writeFileSync('table.html', createTable(baans), 'utf8')
-  await browser.close()
 }
 
 scrape()

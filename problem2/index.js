@@ -13,9 +13,26 @@ function readFolder(folder) {
   return { files, folders }
 }
 
+function search(name, folder) {
+  // search for direct childs of this folder first
+  const results = folder.files
+    // assumption: file name does not have to be an exact match
+    .filter(file => file.includes(name))
+    .map(file => `/${file}`)
+  // then search subfolders
+  for (let subfolder of folder.folders) {
+    search(name, subfolder).forEach(result => {
+      results.push(`/${subfolder.name}${result}`)
+    })
+  }
+  // results will already be in the correct order
+  // so we don't have to sort it again
+  return results
+}
+
 module.exports = function fileSearch(fileToSearch, filesObj) {
   // assumption: filesObj is a valid JSON file and the root node is a folder
   const tree = JSON.parse(filesObj)
   const root = { name: '', ...readFolder(tree) }
-  console.log(JSON.stringify(root, null, 2))
+  return search(fileToSearch, root)
 }

@@ -81,11 +81,7 @@ async function scrape() {
   await browser.close()
 
   // collect info for each baan
-  const baans = []
-  for (let link of links) {
-    const baanInfo = await getBaanInfo(`${baseUrl}${link}`)
-    baans.push(baanInfo)
-  }
+  const baans = await Promise.all(links.map(link => getBaanInfo(baseUrl + link)))
 
   // export data into table
   fs.writeFileSync('table.html', createTable(baans), 'utf8')

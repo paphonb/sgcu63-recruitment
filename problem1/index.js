@@ -1,6 +1,7 @@
 // assumption: we need to get all baans but the page from SSR only contains small size baans
 //             so we need to execute client-side scripts to get everything
 const puppeteer = require('puppeteer')
+const fs = require('fs')
 const baseUrl = 'https://rubnongkaomai.com'
 
 async function getLinks() {
@@ -29,8 +30,36 @@ async function getBaanInfo() {
   const h3 = document.getElementsByTagName('h3')[0]
   return {
     name: h1.innerText,
-    slogan: h3.innerText,
+    slogan: h3.innerText.split('\n').join('<br>'),
   }
+}
+
+function createTable(baans) {
+  return `
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>บ้านรับน้อง</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+      </head>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ชื่อบ้าน</th>
+            <th>สโลแกน</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${baans.map(baan => `
+            <tr>
+              <td>${baan.name}</td>
+              <td>${baan.slogan}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </html>
+  `
 }
 
 async function scrape() {
@@ -55,7 +84,9 @@ async function scrape() {
     const baanInfo = await page.evaluate(getBaanInfo)
     baans.push(baanInfo)
   }
-  console.log(baans)
+
+  // export data into table
+  fs.writeFileSync('table.html', createTable(baans), 'utf8')
   await browser.close()
 }
 

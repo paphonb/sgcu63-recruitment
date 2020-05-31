@@ -7,33 +7,6 @@ const baseUrl = 'https://rubnongkaomai.com'
 const namePattern = /<h1 type="header">(.*?)<\/h1>/
 const sloganPattern = /<h3 type="header">(.*?)<\/h3>/
 
-async function getLinks() {
-  // promise version of setTimeout
-  const timeout = ms => new Promise(resolve => setTimeout(resolve, ms))
-
-  const container = document.getElementsByClassName('baanGallery-module--gallery-app--2l-Y5')[0].children[0]
-  const tablist = container.children[0]
-  const tabs = tablist.getElementsByClassName('ant-tabs-tab')
-  const panes = document.getElementsByClassName('ant-tabs-tabpane')
-  const links = []
-  for (let tabNo = 0; tabNo < tabs.length; tabNo++) {
-    const tab = tabs[tabNo]
-    const pane = panes[tabNo]
-    tab.click()
-
-    // wait a bit for contents to render
-    await timeout(500)
-
-    // each baan is represented by a link node
-    const baans = pane.getElementsByTagName('a')
-    for (let baan of baans) {
-      // add the link to scrape
-      links.push(baan.getAttribute('href'))
-    }
-  }
-  return links
-}
-
 async function getBaanInfo(link) {
   console.log(`loading ${link}`)
   const response = await fetch(baseUrl + link)
@@ -82,16 +55,29 @@ async function scrape() {
       height: 900,
     })
     await page.goto(`${baseUrl}/baan`)
+    await page.waitForSelector('.ant-tabs div[role=tab]')
+
+    const tabs = await page.$$('.ant-tabs div[role=tab]')
+
+    // click tabs and wait for the page to render them
+    for (let index = 0; index < tabs.length; index++) {
+      tabs[index].click()
+      const tabNo = index + 1
+      console.log(`waiting for tab #${tabNo}`)
+      await page.waitForSelector(`.ant-tabs-content > :nth-child(${tabNo}) > .ant-row a`)
+    }
 
     // collect links of all baans
-    const links = await page.evaluate(getLinks)
+    const links = await page.$$eval('.ant-tabs-content > div > div > div > a', tags => {
+      return tags.map(tag => tag.getAttribute('href'))
+    })
 
     // collect info for each baan
-    const baans = await Promise.all(links.map(link => getBaanInfo(link)))
+    const baans = await Promise.all(links.map(getBaanInfo))
 
     // export data into table
     fs.writeFileSync('table.html', createTable(baans), 'utf8')
-    console.log('Successfully exported to table.html')
+    console.log(`Successfully exported ${baans.length} entries to table.html`)
   } catch (e) {
     console.log(e)
     console.log('An error occurred. Please see the stack trace above.')

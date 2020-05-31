@@ -8,7 +8,6 @@ function readFolder(folder) {
       name, ...readFolder(folder[name]),
     }))
   // sort the children
-  files.sort()
   folders.sort((f1, f2) => f1.name.localeCompare(f2.name))
   return { files, folders }
 }

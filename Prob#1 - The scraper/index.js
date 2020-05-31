@@ -35,8 +35,8 @@ async function getLinks() {
 }
 
 async function getBaanInfo(link) {
-  console.log(`getting info for ${link}`)
-  const response = await fetch(link)
+  console.log(`loading ${link}`)
+  const response = await fetch(baseUrl + link)
   const html = await response.text()
   const name = html.match(namePattern)[1]
   const slogan = html.match(sloganPattern)[1]
@@ -73,24 +73,31 @@ function createTable(baans) {
 
 async function scrape() {
   const browser = await puppeteer.launch()
-  const page = await browser.newPage()
-  // for debugging
-  page.on('console', msg => console.log('page:', msg.text()));
-  await page.setViewport({
-    width: 1600,
-    height: 900,
-  })
-  await page.goto(`${baseUrl}/baan`)
+  try {
+    const page = await browser.newPage()
+    // for debugging
+    page.on('console', msg => console.log('page:', msg.text()));
+    await page.setViewport({
+      width: 1600,
+      height: 900,
+    })
+    await page.goto(`${baseUrl}/baan`)
 
-  // collect links of all baans
-  const links = await page.evaluate(getLinks)
-  await browser.close()
+    // collect links of all baans
+    const links = await page.evaluate(getLinks)
 
-  // collect info for each baan
-  const baans = await Promise.all(links.map(link => getBaanInfo(baseUrl + link)))
+    // collect info for each baan
+    const baans = await Promise.all(links.map(link => getBaanInfo(link)))
 
-  // export data into table
-  fs.writeFileSync('table.html', createTable(baans), 'utf8')
+    // export data into table
+    fs.writeFileSync('table.html', createTable(baans), 'utf8')
+    console.log('Successfully exported to table.html')
+  } catch (e) {
+    console.log(e)
+    console.log('An error occurred. Please see the stack trace above.')
+  } finally {
+    await browser.close()
+  }
 }
 
 scrape()

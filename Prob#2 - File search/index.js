@@ -16,8 +16,7 @@ function readFolder(folder) {
 function search(name, folder) {
   // search for direct childs of this folder first
   const results = folder.files
-    // assumption: file name does not have to be an exact match
-    .filter(file => file.includes(name))
+    .filter(file => file === name)
     .map(file => `/${file}`)
   // then search subfolders
   for (let subfolder of folder.folders) {

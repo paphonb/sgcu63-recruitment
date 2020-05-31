@@ -13,25 +13,25 @@ function readFolder(folder) {
   return { files, folders }
 }
 
-function search(name, folder) {
-  // search for direct childs of this folder first
-  const results = folder.files
-    .filter(file => file === name)
-    .map(file => `/${file}`)
-  // then search subfolders
-  for (let subfolder of folder.folders) {
-    search(name, subfolder).forEach(result => {
-      results.push(`/${subfolder.name}${result}`)
-    })
-  }
-  // results will already be in the correct order
-  // so we don't have to sort it again
-  return results
-}
-
 module.exports = function fileSearch(fileToSearch, filesObj) {
   // assumption: filesObj is a valid JSON file and the root node is a folder
   const tree = JSON.parse(filesObj)
   const root = { name: '', ...readFolder(tree) }
-  return search(fileToSearch, root)
+
+  // using a bfs algorithm ensures that more shallow nodes always get visited first
+  // for equally deep nodes, sorting is already handled while parsing the tree
+  const results = []
+  const queue = [{ parent: '', folder: root }]
+  while (queue.length > 0) {
+    const { parent, folder } = queue.shift()
+    for (const file of folder.files) {
+      if (file === fileToSearch) {
+        results.push(`${parent}${folder.name}/${file}`)
+      }
+    }
+    for (const subFolder of folder.folders) {
+      queue.push({ parent: `${parent}${folder.name}/`, folder: subFolder })
+    }
+  }
+  return results
 }
